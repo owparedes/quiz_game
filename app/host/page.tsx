@@ -5,8 +5,8 @@ import { pusherClient } from "@/lib/pusher";
 import { initAudio, playTick, playTimeUp } from "@/lib/sounds";
 
 const TEAM_COLORS = [
-  "#22c55e","#4ade80","#86efac","#3b82f6","#f59e0b",
-  "#ec4899","#8b5cf6","#f87171","#06b6d4","#a3e635",
+  "#22c55e", "#4ade80", "#86efac", "#3b82f6", "#f59e0b",
+  "#ec4899", "#8b5cf6", "#f87171", "#06b6d4", "#a3e635",
 ];
 
 async function broadcast(channel: string, event: string, data: any) {
@@ -21,7 +21,7 @@ const STORAGE_KEY = (room: string) => `qlive_host_${room}`;
 function saveHostState(room: string, state: any) {
   try {
     localStorage.setItem(STORAGE_KEY(room), JSON.stringify({ ...state, savedAt: Date.now() }));
-  } catch {}
+  } catch { }
 }
 function loadHostState(room: string) {
   try {
@@ -119,15 +119,15 @@ export default function HostPage() {
   );
 
   const goToReveal = useCallback(
-    async (currentAnswers: PlayerAnswer[], currentScores: { [k: string]: number }) => {
+    async (currentAnswers: PlayerAnswer[], currentScores: { [k: string]: number }, qIndex: number) => {
       if (timerRef.current) clearInterval(timerRef.current);
       setPhase("reveal");
       await broadcast(`quiz-${roomCode}`, "game:state", {
         phase: "reveal",
-        currentQuestion: questions[currentQIndex]
-          ? { text: questions[currentQIndex].text, choices: questions[currentQIndex].choices }
+        currentQuestion: questions[qIndex]
+          ? { text: questions[qIndex].text, choices: questions[qIndex].choices }
           : null,
-        questionIndex: currentQIndex,
+        questionIndex: qIndex,
         totalQuestions: questions.length,
         timeLimit,
         timerValue: 0,
@@ -139,7 +139,7 @@ export default function HostPage() {
       });
 
       setTimeout(async () => {
-        const correct = questions[currentQIndex].correctAnswer;
+        const correct = questions[qIndex].correctAnswer;
         const newRound: { [k: string]: number } = {};
         const newScores = { ...currentScores };
         teams.forEach((t) => {
@@ -158,8 +158,8 @@ export default function HostPage() {
         setPhase("answer");
         const answerState: GameState = {
           phase: "answer",
-          currentQuestion: { text: questions[currentQIndex].text, choices: questions[currentQIndex].choices },
-          questionIndex: currentQIndex,
+          currentQuestion: { text: questions[qIndex].text, choices: questions[qIndex].choices },
+          questionIndex: qIndex,
           totalQuestions: questions.length,
           timeLimit,
           timerValue: 0,
@@ -176,7 +176,7 @@ export default function HostPage() {
         }, 5000);
       }, 4000);
     },
-    [questions, currentQIndex, teams, timeLimit, roomCode]
+    [questions, teams, timeLimit, roomCode]
   );
 
   const startQuestion = useCallback(
@@ -201,7 +201,7 @@ export default function HostPage() {
       await broadcast(`quiz-${roomCode}`, "game:state", state);
       startTimer(timeLimit, () => {
         setPendingAnswers((prev) => {
-          goToReveal(prev, currentScores);
+          goToReveal(prev, currentScores, qIndex);
           return prev;
         });
       });
@@ -443,7 +443,7 @@ export default function HostPage() {
           onClick={() => {
             try {
               localStorage.removeItem(STORAGE_KEY(roomCode));
-            } catch {}
+            } catch { }
             window.location.href = "/";
           }}
         >
@@ -851,8 +851,8 @@ export default function HostPage() {
                 {questions.length === 0
                   ? "Add questions to start"
                   : teams.length === 0
-                  ? "Waiting for players…"
-                  : "Start Game →"}
+                    ? "Waiting for players…"
+                    : "Start Game →"}
               </button>
             </div>
           </div>
@@ -989,7 +989,7 @@ export default function HostPage() {
                 onClick={() => {
                   if (timerRef.current) clearInterval(timerRef.current);
                   setPendingAnswers((p) => {
-                    goToReveal(p, scores);
+                    goToReveal(p, scores, currentQIndex);
                     return p;
                   });
                 }}

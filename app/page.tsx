@@ -268,7 +268,7 @@ export default function Home() {
           textTransform: "uppercase",
         }}
       >
-        Powered by Pusher
+        Salientes-Gonzalez Associates
       </p>
     </main>
   );
