@@ -630,7 +630,7 @@ export default function HostPage() {
             {/* Answered player cards */}
             {teams.length > 0 && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center", marginBottom: 16 }}>
-                {teams.map((t, i) => {
+                {teams.map((t) => {
                   const answered = answeredTeams.includes(t);
                   const initials = t.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2);
                   return (
