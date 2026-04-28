@@ -146,13 +146,17 @@ export default function HostPage() {
       const cfg = DIFFICULTY_CONFIG[q.difficulty || "easy"];
       const newRound: Record<string, number> = {};
       const newScores = { ...curScores };
+
+      // Only the FIRST correct answer gets the points
+      // answers array is in order of submission (earliest first)
+      const firstCorrect = answers.find(a => a.answer === correct);
       teams.forEach(t => {
-        const ans = answers.find(a => a.teamName === t);
-        if (ans && ans.answer === correct) {
-          const pts = cfg.pts; // flat points: 1 easy, 2 medium, 3 hard
-          newRound[t] = pts;
-          newScores[t] = (newScores[t] || 0) + pts;
-        } else { newRound[t] = 0; }
+        if (firstCorrect && firstCorrect.teamName === t) {
+          newRound[t] = cfg.pts; // winner gets the points
+          newScores[t] = (newScores[t] || 0) + cfg.pts;
+        } else {
+          newRound[t] = 0; // everyone else gets nothing
+        }
       });
       setRoundScores(newRound); setScores(newScores);
       setPhase("answer");
