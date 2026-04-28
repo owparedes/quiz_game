@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Home() {
   return (
@@ -8,7 +9,7 @@ export default function Home() {
       {/* Logo */}
       <div className="anim-up" style={{ textAlign: "center", marginBottom: "clamp(32px,7vw,52px)" }}>
         <div style={{ width: 64, height: 64, borderRadius: 18, background: "var(--accent-lo)", border: "1.5px solid var(--border-em)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", overflow: "hidden" }}>
-          <img src="/sga.png" alt="SGA Logo" style={{ width: 46, height: 46, objectFit: "contain" }} />
+          <Image src="/sga.png" alt="SGA Logo" width={46} height={46} style={{ objectFit: "contain" }} />
         </div>
         <h1 style={{ fontFamily: "'Inter',sans-serif", fontWeight: 900, fontSize: "clamp(2rem,7vw,2.8rem)", letterSpacing: "-0.04em", color: "var(--text-1)", lineHeight: 1, marginBottom: 8 }}>
           Quiz<span style={{ color: "var(--accent)" }}>Live</span>

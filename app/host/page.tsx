@@ -100,17 +100,6 @@ export default function HostPage() {
     setJoined(true);
   };
 
-  const buildState = useCallback((overrides: Partial<GameState> = {}): GameState => {
-    const q = questions[qIdx];
-    return {
-      phase, currentQuestion: q ? { text: q.text, choices: q.choices, difficulty: q.difficulty } : null,
-      questionIndex: qIdx, totalQuestions: questions.length, timeLimit,
-      timerValue: timer, timerPaused: paused,
-      scores, roundScores, teams, correctAnswer: null, answeredTeams,
-      difficulty: q?.difficulty, ...overrides,
-    };
-  }, [phase, questions, qIdx, timeLimit, timer, paused, scores, roundScores, teams, answeredTeams]);
-
   const clearTimer = () => { if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; } };
 
   const startTimer = useCallback((seconds: number, onEnd: () => void) => {

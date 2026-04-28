@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { GameState, AnswerKey, DIFFICULTY_CONFIG } from "@/lib/gameTypes";
 import { pusherClient } from "@/lib/pusher";
 import {
@@ -37,7 +37,6 @@ export default function PlayPage() {
   const [countdown, setCountdown] = useState(3);
   const [showCountdown, setShowCountdown] = useState(false);
   const [paused, setPaused] = useState(false);
-  const [answerLockTime, setAnswerLockTime] = useState<number | null>(null);
 
   const channelRef = useRef<any>(null);
   const audioRef = useRef(false);
@@ -81,7 +80,7 @@ export default function PlayPage() {
         else stopMusic();
       }
       if (cur === "question" && (prev === "leaderboard" || prev === "game_over" || prev === "")) {
-        setMyAnswer(null); setAnswerLockTime(null);
+        setMyAnswer(null);
         setShowCountdown(true); countKeyRef.current++;
         setCountdown(3); let c = 3;
         const diff = state.currentQuestion?.difficulty || "easy";
@@ -97,7 +96,7 @@ export default function PlayPage() {
         // urgency update only
       }
       if (cur === "question" && prev !== "question" && prev !== "leaderboard" && prev !== "" && prev !== "game_over") {
-        setMyAnswer(null); setAnswerLockTime(null);
+        setMyAnswer(null);
       }
       setPaused(state.timerPaused || false);
       prevPhaseRef.current = cur;
@@ -142,7 +141,6 @@ export default function PlayPage() {
     if (myAnswer || paused) return;
     initAudioOnce();
     setMyAnswer(answer);
-    setAnswerLockTime(gameState?.timerValue || 0);
     await broadcast(`quiz-${roomCode}`, "player:answer", { teamName, answer, timeRemaining: gameState?.timerValue || 0 });
   };
 
@@ -291,7 +289,7 @@ export default function PlayPage() {
           </div>
         ) : gameState.timerValue === 0 && !paused ? (
           <div className="card" style={{ padding: "22px 18px", textAlign: "center" }}>
-            <p style={{ fontWeight: 700, color: "#f87171", fontSize: "0.95rem" }}>Time's up!</p>
+            <p style={{ fontWeight: 700, color: "#f87171", fontSize: "0.95rem" }}>Time&apos;s up!</p>
           </div>
         ) : paused ? (
           <div className="card" style={{ padding: "22px 18px", textAlign: "center", borderColor: "rgba(251,191,36,0.2)" }}>
