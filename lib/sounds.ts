@@ -33,8 +33,6 @@ function tone(freq: number, dur: number, type: OscillatorType = "sine", vol = 0.
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   osc.start(t); osc.stop(t + dur + 0.01);
 }
-
-// ── Ticks ──────────────────────────────────────────────────
 export function playTick() {
   const c = ctx(), now = c.currentTime;
   const freq = currentDiff === "hard" ? 1100 : currentDiff === "medium" ? 960 : 820;
@@ -50,8 +48,6 @@ export function playTimeUp() {
   const c = ctx(), now = c.currentTime;
   [400, 300, 200].forEach((f, i) => tone(f, 0.28, "sawtooth", 0.32, now + i * 0.2));
 }
-
-// ── Countdown ──────────────────────────────────────────────
 export function playCountdownBeep(n: number) {
   const c = ctx(), now = c.currentTime;
   if (n > 0) {
@@ -63,16 +59,12 @@ export function playCountdownBeep(n: number) {
     tone(130, 0.35, "triangle", 0.3, now);
   }
 }
-
-// ── Question Loop ──────────────────────────────────────────
 export function startQuestionLoop(urgency = 0) {
   stopMusic(); currentLoop = "question";
   const c = ctx();
   const bpm = (currentDiff === "hard" ? 138 : currentDiff === "medium" ? 118 : 98) + urgency * 44;
   const beat = 60 / bpm;
   let stopped = false;
-
-  // Bass pulse
   const bg = c.createGain(); bg.gain.value = 0; bg.connect(master());
   const bo = c.createOscillator();
   bo.type = "sine";
@@ -97,8 +89,6 @@ export function startQuestionLoop(urgency = 0) {
     setTimeout(pulse, 200);
   }
   pulse();
-
-  // Arp
   const patterns = {
     easy: [220, 277, 330, 415, 523, 415, 330, 277],
     medium: [185, 233, 311, 370, 466, 554, 466, 370],
@@ -113,8 +103,6 @@ export function startQuestionLoop(urgency = 0) {
     ai++; setTimeout(arp, aspd * 1000);
   }
   arp();
-
-  // Hi-hat (medium+)
   let hStopped = false;
   if (currentDiff !== "easy" || urgency > 0.6) {
     const hat = () => {
@@ -132,8 +120,6 @@ export function startQuestionLoop(urgency = 0) {
 export function updateQuestionUrgency(urgency: number) {
   if (currentLoop === "question") { stopMusic(); startQuestionLoop(urgency); }
 }
-
-// ── Reveal ─────────────────────────────────────────────────
 export function playRevealMusic() {
   stopMusic();
   const c = ctx(), now = c.currentTime;
@@ -154,8 +140,6 @@ export function playRevealMusic() {
   roll();
   bgLoopNodes.push({ stop: () => { rStopped = true; } });
 }
-
-// ── Correct / Wrong ────────────────────────────────────────
 export function playCorrect() {
   stopMusic();
   const c = ctx(), now = c.currentTime;
@@ -175,8 +159,6 @@ export function playWrong() {
     [220, 196, 165].forEach((f, i) => tone(f, 0.22, "sawtooth", 0.3, now + i * 0.2));
   }
 }
-
-// ── Leaderboard Loop ───────────────────────────────────────
 export function startLeaderboardMusic(isTop: boolean) {
   stopMusic(); currentLoop = "leaderboard";
   const c = ctx(); let stopped = false;
@@ -198,8 +180,6 @@ export function startLeaderboardMusic(isTop: boolean) {
   hat();
   bgLoopNodes.push({ stop: () => { stopped = true; hStopped = true; } });
 }
-
-// ── Winner ─────────────────────────────────────────────────
 export function playWinnerMusic() {
   stopMusic(); currentLoop = "winner";
   const c = ctx(), now = c.currentTime;
@@ -218,8 +198,6 @@ export function playWinnerMusic() {
   loop();
   bgLoopNodes.push({ stop: () => { stopped = true; } });
 }
-
-// ── Pause / Resume sounds ──────────────────────────────────
 export function playPause() {
   const c = ctx(), now = c.currentTime;
   tone(660, 0.08, "sine", 0.2, now);

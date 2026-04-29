@@ -41,8 +41,6 @@ export interface PlayerAnswer {
   answer: AnswerKey;
   timeRemaining: number;
 }
-
-// Points: 1 / 2 / 5
 export const DIFFICULTY_CONFIG = {
   easy: { label: "Easy", color: "#4ade80", glow: "rgba(74,222,128,0.3)", bg: "rgba(74,222,128,0.08)", border: "rgba(74,222,128,0.25)", pts: 1, emoji: "●" },
   medium: { label: "Medium", color: "#fbbf24", glow: "rgba(251,191,36,0.3)", bg: "rgba(251,191,36,0.08)", border: "rgba(251,191,36,0.25)", pts: 2, emoji: "●" },

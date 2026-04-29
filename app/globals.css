@@ -43,7 +43,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Subtle ambient glow */
 body::before {
   content: '';
   position: fixed;
@@ -62,7 +61,6 @@ main {
   z-index: 1;
 }
 
-/* ── Cards ───────────────────────────────────────── */
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -83,7 +81,6 @@ main {
   border-radius: var(--radius-xl);
 }
 
-/* ── Inputs ──────────────────────────────────────── */
 .inp {
   width: 100%;
   background: var(--bg);
@@ -119,7 +116,6 @@ textarea.inp {
   resize: vertical;
 }
 
-/* ── Buttons ─────────────────────────────────────── */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -197,7 +193,6 @@ textarea.inp {
   aspect-ratio: 1;
 }
 
-/* ── Badge ───────────────────────────────────────── */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -218,7 +213,6 @@ textarea.inp {
   border-color: var(--border-hi);
 }
 
-/* ── Answer Buttons ──────────────────────────────── */
 .ans-btn {
   display: flex;
   align-items: center;
@@ -308,7 +302,6 @@ textarea.inp {
   opacity: 1 !important;
 }
 
-/* ── Rank rows ───────────────────────────────────── */
 .rank-row {
   display: flex;
   align-items: center;
@@ -330,7 +323,6 @@ textarea.inp {
   background: rgba(251, 191, 36, 0.05);
 }
 
-/* ── Timer ───────────────────────────────────────── */
 .timer-bar {
   width: 100%;
   height: 5px;
@@ -345,7 +337,6 @@ textarea.inp {
   transition: width 0.92s linear, background 0.3s;
 }
 
-/* ── Dots ────────────────────────────────────────── */
 .dots {
   display: inline-flex;
   gap: 5px;
@@ -368,7 +359,6 @@ textarea.inp {
   animation-delay: 0.4s;
 }
 
-/* ── Difficulty pill ─────────────────────────────── */
 .diff-pip {
   width: 7px;
   height: 7px;
@@ -377,7 +367,6 @@ textarea.inp {
   flex-shrink: 0;
 }
 
-/* ── Scrollbar ───────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 3px;
 }
@@ -391,7 +380,6 @@ textarea.inp {
   border-radius: 3px;
 }
 
-/* ── Animations ──────────────────────────────────── */
 @keyframes dot-pulse {
 
   0%,
@@ -627,12 +615,10 @@ textarea.inp {
   animation: confetti-fall linear forwards;
 }
 
-/* ── Score pop ───────────────────────────────────── */
 .score-pop {
   animation: score-pop .35s ease;
 }
 
-/* ── Shimmer skeleton ────────────────────────────── */
 .shimmer {
   background: linear-gradient(90deg, var(--surface) 25%, var(--surface-2) 50%, var(--surface) 75%);
   background-size: 200% 100%;

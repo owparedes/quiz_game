@@ -26,8 +26,6 @@ function load(room: string) {
     return p;
   } catch { return null; }
 }
-
-// Validate imported JSON questions
 function validateQuestions(raw: any): Question[] | null {
   if (!Array.isArray(raw)) return null;
   const result: Question[] = [];
@@ -146,16 +144,13 @@ export default function HostPage() {
       const cfg = DIFFICULTY_CONFIG[q.difficulty || "easy"];
       const newRound: Record<string, number> = {};
       const newScores = { ...curScores };
-
-      // Only the FIRST correct answer gets the points
-      // answers array is in order of submission (earliest first)
       const firstCorrect = answers.find(a => a.answer === correct);
       teams.forEach(t => {
         if (firstCorrect && firstCorrect.teamName === t) {
-          newRound[t] = cfg.pts; // winner gets the points
+          newRound[t] = cfg.pts;
           newScores[t] = (newScores[t] || 0) + cfg.pts;
         } else {
-          newRound[t] = 0; // everyone else gets nothing
+          newRound[t] = 0;
         }
       });
       setRoundScores(newRound); setScores(newScores);
@@ -170,7 +165,7 @@ export default function HostPage() {
       await broadcast(`quiz-${roomCode}`, "game:state", ansState);
       setTimeout(async () => {
         const sorted = [...teams].sort((a, b) => (newScores[b] || 0) - (newScores[a] || 0));
-        startLeaderboardMusic(sorted[0] === sorted[0]); // always "top" variation for host
+        startLeaderboardMusic(sorted[0] === sorted[0]);
         setPhase("leaderboard");
         await broadcast(`quiz-${roomCode}`, "game:state", { ...ansState, phase: "leaderboard" });
       }, 5000);
@@ -217,7 +212,6 @@ export default function HostPage() {
     ch.bind("player:join", (data: { teamName: string }) => {
       setTeams(prev => {
         if (prev.includes(data.teamName)) {
-          // Player rejoined — resend current state so they don't get stuck
           setScores(s => {
             broadcast(`quiz-${roomCode}`, "game:state", {
               phase: "waiting", currentQuestion: null, questionIndex: 0,
@@ -245,7 +239,6 @@ export default function HostPage() {
       setAnsweredTeams(p => p.includes(data.teamName) ? p : [...p, data.teamName]);
       setPendingAnswers(p => p.find(a => a.teamName === data.teamName) ? p : [...p, data]);
     });
-    // Handle late-join resync requests
     ch.bind("player:request_state", () => {
       setScores(s => {
         broadcast(`quiz-${roomCode}`, "game:state", {
@@ -291,11 +284,9 @@ export default function HostPage() {
     } catch { setImportErr("Invalid JSON. Make sure it's valid JSON."); }
   };
 
-  const S = { // style helpers
+  const S = {
     label: { display: "block" as const, fontSize: "0.68rem", fontWeight: 700, color: "var(--text-2)", marginBottom: 7, letterSpacing: "0.07em", textTransform: "uppercase" as const },
   };
-
-  // ── Join ──────────────────────────────────────────────────────────────────
   if (!joined) return (
     <main style={{ minHeight: "100svh", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px 16px" }}>
       <div className="card card-em anim-up" style={{ width: "100%", maxWidth: 380, padding: "clamp(28px,6vw,40px) clamp(22px,5vw,32px)" }}>
@@ -317,8 +308,6 @@ export default function HostPage() {
       </div>
     </main>
   );
-
-  // ── Game Over ──────────────────────────────────────────────────────────────
   if (phase === "game_over") {
     const sorted = [...teams].sort((a, b) => (scores[b] || 0) - (scores[a] || 0));
     return (
@@ -354,8 +343,6 @@ export default function HostPage() {
   return (
     <main style={{ minHeight: "100svh", padding: "clamp(12px,3vw,18px)", paddingBottom: 40 }}>
       <div style={{ maxWidth: 920, margin: "0 auto" }}>
-
-        {/* ── Top bar ──────────────────────────────────────── */}
         <div className="anim-up" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, gap: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontWeight: 800, fontSize: "0.92rem", color: "var(--text-1)", letterSpacing: "-0.02em" }}>QuizLive</span>
@@ -366,14 +353,9 @@ export default function HostPage() {
             {phase === "question" && <span className="badge badge-neutral">{teams.length} players</span>}
           </div>
         </div>
-
-        {/* ── WAITING ──────────────────────────────────────── */}
         {phase === "waiting" && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,340px),1fr))", gap: 14, alignItems: "start" }}>
-
-            {/* Left: Editor */}
             <div className="card anim-up" style={{ padding: "clamp(16px,4vw,22px)" }}>
-              {/* Tabs */}
               <div style={{ display: "flex", gap: 4, marginBottom: 18, background: "var(--bg)", borderRadius: 10, padding: 3 }}>
                 {(["editor", "list"] as const).map(t => (
                   <button key={t} onClick={() => setTab(t)}
@@ -393,8 +375,6 @@ export default function HostPage() {
                   <textarea className="inp" rows={3} placeholder="Type your question here…"
                     style={{ marginBottom: 14, fontSize: "0.875rem" }}
                     value={newQ.text} onChange={e => setNewQ(q => ({ ...q, text: e.target.value }))} />
-
-                  {/* Difficulty */}
                   <label style={S.label}>Difficulty & Points</label>
                   <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
                     {(["easy", "medium", "hard"] as Difficulty[]).map(d => {
@@ -415,8 +395,6 @@ export default function HostPage() {
                       );
                     })}
                   </div>
-
-                  {/* Choices */}
                   <label style={S.label}>Answer Choices</label>
                   <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 14 }}>
                     {(["A", "B", "C", "D"] as AnswerKey[]).map(k => (
@@ -477,8 +455,6 @@ export default function HostPage() {
                   )}
                 </>
               )}
-
-              {/* Import section */}
               <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: showImport ? 12 : 0 }}>
                   <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-2)", letterSpacing: "0.06em", textTransform: "uppercase" }}>Import JSON</span>
@@ -508,8 +484,6 @@ export default function HostPage() {
                   </div>
                 )}
               </div>
-
-              {/* Timer */}
               <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
                 <label style={S.label}>Time per question</label>
                 <div style={{ display: "flex", gap: 5 }}>
@@ -528,8 +502,6 @@ export default function HostPage() {
                 </div>
               </div>
             </div>
-
-            {/* Right: Players + Start */}
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div className="card anim-up-1" style={{ padding: "clamp(16px,4vw,20px)" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
@@ -553,8 +525,6 @@ export default function HostPage() {
                   </div>
                 )}
               </div>
-
-              {/* Question summary */}
               {questions.length > 0 && (
                 <div className="card anim-up-2" style={{ padding: "14px 18px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -579,11 +549,8 @@ export default function HostPage() {
             </div>
           </div>
         )}
-
-        {/* ── QUESTION ─────────────────────────────────────── */}
         {phase === "question" && currentQ && (
           <div className="card anim-scale" style={{ padding: "clamp(18px,4vw,26px)", borderColor: diffCfg.border, boxShadow: `0 0 28px ${diffCfg.glow}` }}>
-            {/* Header */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, gap: 8 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span className="badge">{String(qIdx + 1).padStart(2, "0")}/{questions.length}</span>
@@ -594,7 +561,6 @@ export default function HostPage() {
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span className="badge badge-neutral">{answeredTeams.length}/{teams.length} answered</span>
-                {/* Pause button */}
                 <button className={`btn ${paused ? "btn-primary" : "btn-ghost"} btn-icon`}
                   style={{ fontSize: "0.85rem", padding: "7px 10px" }}
                   onClick={togglePause} title={paused ? "Resume" : "Pause"}>
@@ -602,8 +568,6 @@ export default function HostPage() {
                 </button>
               </div>
             </div>
-
-            {/* Timer */}
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
               <div className={timer <= 5 && !paused ? "timer-warn" : ""} style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 900, fontSize: "clamp(1.8rem,6vw,2.6rem)", color: paused ? "var(--text-2)" : timer <= 5 ? "#f87171" : diffCfg.color, lineHeight: 1, minWidth: "2.5rem", textAlign: "center" }}>
                 {paused ? <span style={{ fontSize: "1.2rem" }}>⏸</span> : timer}
@@ -615,13 +579,9 @@ export default function HostPage() {
                 {paused && <p style={{ fontSize: "0.7rem", color: "var(--text-3)", marginTop: 4, fontWeight: 600 }}>PAUSED — players are waiting</p>}
               </div>
             </div>
-
-            {/* Question text */}
             <p style={{ fontWeight: 700, fontSize: "clamp(1rem,2.5vw,1.25rem)", color: "var(--text-1)", textAlign: "center", marginBottom: 16, lineHeight: 1.5 }}>
               {currentQ.text}
             </p>
-
-            {/* Choices */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,210px),1fr))", gap: 7, marginBottom: 16 }}>
               {(["A", "B", "C", "D"] as AnswerKey[]).map(k => (
                 <div key={k} style={{ padding: "10px 13px", borderRadius: 10, background: "var(--surface-2)", border: "1px solid var(--border)", display: "flex", gap: 9, alignItems: "flex-start" }}>
@@ -630,8 +590,6 @@ export default function HostPage() {
                 </div>
               ))}
             </div>
-
-            {/* Answered player cards */}
             {teams.length > 0 && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center", marginBottom: 16 }}>
                 {teams.map((t) => {
@@ -687,8 +645,6 @@ export default function HostPage() {
             </div>
           </div>
         )}
-
-        {/* ── REVEAL ───────────────────────────────────────── */}
         {phase === "reveal" && (
           <div className="card anim-scale" style={{ padding: "clamp(28px,5vw,44px) clamp(20px,5vw,28px)", textAlign: "center", borderColor: diffCfg.border, boxShadow: `0 0 36px ${diffCfg.glow}` }}>
             <div className="dots" style={{ justifyContent: "center", marginBottom: 18 }}><span /><span /><span /></div>
@@ -696,8 +652,6 @@ export default function HostPage() {
             <p style={{ color: "var(--text-3)", fontSize: "0.8rem", marginTop: 5 }}>Hold on…</p>
           </div>
         )}
-
-        {/* ── ANSWER ───────────────────────────────────────── */}
         {phase === "answer" && currentQ && (
           <div className="card anim-scale" style={{ padding: "clamp(24px,5vw,40px) clamp(18px,5vw,28px)", textAlign: "center", borderColor: diffCfg.border, boxShadow: `0 0 36px ${diffCfg.glow}` }}>
             <p style={{ fontSize: "0.68rem", fontWeight: 700, color: "var(--text-2)", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 8 }}>Correct Answer</p>
@@ -717,8 +671,6 @@ export default function HostPage() {
             </div>
           </div>
         )}
-
-        {/* ── LEADERBOARD ──────────────────────────────────── */}
         {phase === "leaderboard" && (
           <div className="card anim-scale" style={{ padding: "clamp(18px,4vw,26px)", maxWidth: 460, margin: "0 auto" }}>
             <p style={{ fontWeight: 800, fontSize: "1.05rem", textAlign: "center", marginBottom: 16, color: "var(--text-1)", letterSpacing: "-0.02em" }}>Leaderboard</p>

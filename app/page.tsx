@@ -5,8 +5,6 @@ import Image from "next/image";
 export default function Home() {
   return (
     <main style={{ minHeight: "100svh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "clamp(20px,5vw,40px) 16px" }}>
-
-      {/* Logo */}
       <div className="anim-up" style={{ textAlign: "center", marginBottom: "clamp(32px,7vw,52px)" }}>
         <div style={{ width: 64, height: 64, borderRadius: 18, background: "var(--accent-lo)", border: "1.5px solid var(--border-em)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", overflow: "hidden" }}>
           <Image src="/sga.png" alt="SGA Logo" width={46} height={46} style={{ objectFit: "contain" }} />
@@ -16,8 +14,6 @@ export default function Home() {
         </h1>
         <p style={{ color: "var(--text-3)", fontSize: "clamp(0.8rem,2.5vw,0.9rem)", fontWeight: 500 }}>Real-time multiplayer quizzes</p>
       </div>
-
-      {/* Cards */}
       <div className="anim-up-1" style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%", maxWidth: 340 }}>
         <Link href="/host" style={{ textDecoration: "none" }}>
           <div className="card card-em" style={{ padding: "18px 20px", cursor: "pointer", transition: "transform 0.16s,box-shadow 0.16s" }}
