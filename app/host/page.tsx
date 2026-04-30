@@ -572,108 +572,110 @@ export default function HostPage() {
             </div>
           </div>
         )}
-        {phase === "question" && currentQ && hostCountdown > 0 ? (
-          <div className="card anim-scale" style={{ padding: "clamp(28px,6vw,48px)", textAlign: "center", borderColor: diffCfg.border, boxShadow: `0 0 36px ${diffCfg.glow}` }}>
-            <p style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-3)", marginBottom: 12 }}>Get Ready…</p>
-            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 900, fontSize: "clamp(4rem,16vw,7rem)", color: diffCfg.color, lineHeight: 1 }}>{hostCountdown}</div>
-            <p style={{ fontSize: "0.78rem", color: "var(--text-3)", marginTop: 12 }}>Q{qIdx + 1} of {questions.length} · {diffCfg.label}</p>
-          </div>
-        ) : phase === "question" && currentQ && (
-          <div className="card anim-scale" style={{ padding: "clamp(18px,4vw,26px)", borderColor: diffCfg.border, boxShadow: `0 0 28px ${diffCfg.glow}` }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, gap: 8 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span className="badge">{String(qIdx + 1).padStart(2, "0")}/{questions.length}</span>
-                <span style={{ padding: "3px 9px", borderRadius: 100, fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", background: diffCfg.bg, color: diffCfg.color, border: `1px solid ${diffCfg.border}` }}>
-                  <span style={{ width: 5, height: 5, borderRadius: "50%", background: diffCfg.color, display: "inline-block", marginRight: 4 }} />
-                  {diffCfg.label} · {diffCfg.pts}pt{diffCfg.pts > 1 ? "s" : ""}
-                </span>
+        {phase === "question" && currentQ && (
+          hostCountdown > 0 ? (
+            <div className="card anim-scale" style={{ padding: "clamp(28px,6vw,48px)", textAlign: "center", borderColor: diffCfg.border, boxShadow: `0 0 36px ${diffCfg.glow}` }}>
+              <p style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-3)", marginBottom: 12 }}>Get Ready…</p>
+              <div style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 900, fontSize: "clamp(4rem,16vw,7rem)", color: diffCfg.color, lineHeight: 1 }}>{hostCountdown}</div>
+              <p style={{ fontSize: "0.78rem", color: "var(--text-3)", marginTop: 12 }}>Q{qIdx + 1} of {questions.length} · {diffCfg.label}</p>
+            </div>
+          ) : (
+            <div className="card anim-scale" style={{ padding: "clamp(18px,4vw,26px)", borderColor: diffCfg.border, boxShadow: `0 0 28px ${diffCfg.glow}` }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span className="badge">{String(qIdx + 1).padStart(2, "0")}/{questions.length}</span>
+                  <span style={{ padding: "3px 9px", borderRadius: 100, fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", background: diffCfg.bg, color: diffCfg.color, border: `1px solid ${diffCfg.border}` }}>
+                    <span style={{ width: 5, height: 5, borderRadius: "50%", background: diffCfg.color, display: "inline-block", marginRight: 4 }} />
+                    {diffCfg.label} · {diffCfg.pts}pt{diffCfg.pts > 1 ? "s" : ""}
+                  </span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span className="badge badge-neutral">{answeredTeams.length}/{teams.length} answered</span>
+                  <button className={`btn ${paused ? "btn-primary" : "btn-ghost"} btn-icon`}
+                    style={{ fontSize: "0.85rem", padding: "7px 10px" }}
+                    onClick={togglePause} title={paused ? "Resume" : "Pause"}>
+                    {paused ? "▶" : "⏸"}
+                  </button>
+                </div>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span className="badge badge-neutral">{answeredTeams.length}/{teams.length} answered</span>
-                <button className={`btn ${paused ? "btn-primary" : "btn-ghost"} btn-icon`}
-                  style={{ fontSize: "0.85rem", padding: "7px 10px" }}
-                  onClick={togglePause} title={paused ? "Resume" : "Pause"}>
-                  {paused ? "▶" : "⏸"}
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                <div className={timer <= 5 && !paused ? "timer-warn" : ""} style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 900, fontSize: "clamp(1.8rem,6vw,2.6rem)", color: paused ? "var(--text-2)" : timer <= 5 ? "#f87171" : diffCfg.color, lineHeight: 1, minWidth: "2.5rem", textAlign: "center" }}>
+                  {paused ? <span style={{ fontSize: "1.2rem" }}>⏸</span> : timer}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div className="timer-bar">
+                    <div className="timer-fill" style={{ width: `${(timer / timeLimit) * 100}%`, background: paused ? "var(--text-3)" : timer <= 5 ? "#f87171" : diffCfg.color, transition: paused ? "none" : "width 0.92s linear" }} />
+                  </div>
+                  {paused && <p style={{ fontSize: "0.7rem", color: "var(--text-3)", marginTop: 4, fontWeight: 600 }}>PAUSED — players are waiting</p>}
+                </div>
+              </div>
+              <p style={{ fontWeight: 700, fontSize: "clamp(1rem,2.5vw,1.25rem)", color: "var(--text-1)", textAlign: "center", marginBottom: 16, lineHeight: 1.5 }}>
+                {currentQ.text}
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,210px),1fr))", gap: 7, marginBottom: 16 }}>
+                {(["A", "B", "C", "D"] as AnswerKey[]).map(k => (
+                  <div key={k} style={{ padding: "10px 13px", borderRadius: 10, background: "var(--surface-2)", border: "1px solid var(--border)", display: "flex", gap: 9, alignItems: "flex-start" }}>
+                    <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "0.68rem", fontWeight: 700, color: "var(--text-3)", flexShrink: 0, marginTop: 1 }}>{k}</span>
+                    <span style={{ fontSize: "0.82rem", color: "var(--text-1)", lineHeight: 1.4 }}>{currentQ.choices[k]}</span>
+                  </div>
+                ))}
+              </div>
+              {teams.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center", marginBottom: 16 }}>
+                  {teams.map((t) => {
+                    const answered = answeredTeams.includes(t);
+                    const initials = t.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2);
+                    return (
+                      <div key={t} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, transition: "all 0.25s" }}>
+                        <div style={{ position: "relative", width: 44, height: 44 }}>
+                          <div style={{
+                            width: 44, height: 44, borderRadius: 14,
+                            background: answered ? "var(--accent-lo)" : "var(--surface-2)",
+                            border: `2px solid ${answered ? "var(--accent)" : "var(--border)"}`,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontWeight: 800, fontSize: "0.82rem", letterSpacing: "-0.01em",
+                            color: answered ? "var(--accent-hi)" : "var(--text-3)",
+                            boxShadow: answered ? "0 0 12px rgba(99,211,142,0.25)" : "none",
+                            transition: "all 0.25s",
+                            opacity: answered ? 1 : 0.5,
+                          }}>
+                            {initials}
+                          </div>
+                          {answered && (
+                            <div style={{
+                              position: "absolute", bottom: -4, right: -4,
+                              width: 18, height: 18, borderRadius: "50%",
+                              background: "var(--accent)", border: "2px solid var(--bg)",
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              fontSize: "0.55rem", color: "#0a1a12", fontWeight: 900,
+                            }}>✓</div>
+                          )}
+                        </div>
+                        <span style={{
+                          fontSize: "0.62rem", fontWeight: 600, maxWidth: 52,
+                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                          color: answered ? "var(--accent-hi)" : "var(--text-3)",
+                          transition: "color 0.25s",
+                        }}>{t}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 7, justifyContent: "center", flexWrap: "wrap" }}>
+                <button className="btn btn-ghost" style={{ fontSize: "0.82rem" }}
+                  onClick={() => { clearTimer(); setPaused(false); pausedRef.current = false; stopMusic(); goToReveal(pendingRef.current, scoresRef.current, qIdx); }}>
+                  Skip to Reveal
+                </button>
+                <button className="btn btn-danger" style={{ fontSize: "0.82rem" }}
+                  onClick={() => { clearTimer(); stopMusic(); setPhase("game_over"); broadcast(`quiz-${roomCode}`, "game:state", { phase: "game_over", currentQuestion: null, questionIndex: qIdx, totalQuestions: questions.length, timeLimit, timerValue: 0, scores, roundScores, teams, correctAnswer: null, answeredTeams }); }}>
+                  End Game
                 </button>
               </div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-              <div className={timer <= 5 && !paused ? "timer-warn" : ""} style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 900, fontSize: "clamp(1.8rem,6vw,2.6rem)", color: paused ? "var(--text-2)" : timer <= 5 ? "#f87171" : diffCfg.color, lineHeight: 1, minWidth: "2.5rem", textAlign: "center" }}>
-                {paused ? <span style={{ fontSize: "1.2rem" }}>⏸</span> : timer}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div className="timer-bar">
-                  <div className="timer-fill" style={{ width: `${(timer / timeLimit) * 100}%`, background: paused ? "var(--text-3)" : timer <= 5 ? "#f87171" : diffCfg.color, transition: paused ? "none" : "width 0.92s linear" }} />
-                </div>
-                {paused && <p style={{ fontSize: "0.7rem", color: "var(--text-3)", marginTop: 4, fontWeight: 600 }}>PAUSED — players are waiting</p>}
-              </div>
-            </div>
-            <p style={{ fontWeight: 700, fontSize: "clamp(1rem,2.5vw,1.25rem)", color: "var(--text-1)", textAlign: "center", marginBottom: 16, lineHeight: 1.5 }}>
-              {currentQ.text}
-            </p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,210px),1fr))", gap: 7, marginBottom: 16 }}>
-              {(["A", "B", "C", "D"] as AnswerKey[]).map(k => (
-                <div key={k} style={{ padding: "10px 13px", borderRadius: 10, background: "var(--surface-2)", border: "1px solid var(--border)", display: "flex", gap: 9, alignItems: "flex-start" }}>
-                  <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "0.68rem", fontWeight: 700, color: "var(--text-3)", flexShrink: 0, marginTop: 1 }}>{k}</span>
-                  <span style={{ fontSize: "0.82rem", color: "var(--text-1)", lineHeight: 1.4 }}>{currentQ.choices[k]}</span>
-                </div>
-              ))}
-            </div>
-            {teams.length > 0 && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center", marginBottom: 16 }}>
-                {teams.map((t) => {
-                  const answered = answeredTeams.includes(t);
-                  const initials = t.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2);
-                  return (
-                    <div key={t} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, transition: "all 0.25s" }}>
-                      <div style={{ position: "relative", width: 44, height: 44 }}>
-                        <div style={{
-                          width: 44, height: 44, borderRadius: 14,
-                          background: answered ? "var(--accent-lo)" : "var(--surface-2)",
-                          border: `2px solid ${answered ? "var(--accent)" : "var(--border)"}`,
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          fontWeight: 800, fontSize: "0.82rem", letterSpacing: "-0.01em",
-                          color: answered ? "var(--accent-hi)" : "var(--text-3)",
-                          boxShadow: answered ? "0 0 12px rgba(99,211,142,0.25)" : "none",
-                          transition: "all 0.25s",
-                          opacity: answered ? 1 : 0.5,
-                        }}>
-                          {initials}
-                        </div>
-                        {answered && (
-                          <div style={{
-                            position: "absolute", bottom: -4, right: -4,
-                            width: 18, height: 18, borderRadius: "50%",
-                            background: "var(--accent)", border: "2px solid var(--bg)",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            fontSize: "0.55rem", color: "#0a1a12", fontWeight: 900,
-                          }}>✓</div>
-                        )}
-                      </div>
-                      <span style={{
-                        fontSize: "0.62rem", fontWeight: 600, maxWidth: 52,
-                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                        color: answered ? "var(--accent-hi)" : "var(--text-3)",
-                        transition: "color 0.25s",
-                      }}>{t}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            <div style={{ display: "flex", gap: 7, justifyContent: "center", flexWrap: "wrap" }}>
-              <button className="btn btn-ghost" style={{ fontSize: "0.82rem" }}
-                onClick={() => { clearTimer(); setPaused(false); pausedRef.current = false; stopMusic(); goToReveal(pendingRef.current, scoresRef.current, qIdx); }}>
-                Skip to Reveal
-              </button>
-              <button className="btn btn-danger" style={{ fontSize: "0.82rem" }}
-                onClick={() => { clearTimer(); stopMusic(); setPhase("game_over"); broadcast(`quiz-${roomCode}`, "game:state", { phase: "game_over", currentQuestion: null, questionIndex: qIdx, totalQuestions: questions.length, timeLimit, timerValue: 0, scores, roundScores, teams, correctAnswer: null, answeredTeams }); }}>
-                End Game
-              </button>
-            </div>
-          </div>
-        ))}
+          )
+        )}
         {phase === "reveal" && (
           <div className="card anim-scale" style={{ padding: "clamp(28px,5vw,44px) clamp(20px,5vw,28px)", textAlign: "center", borderColor: diffCfg.border, boxShadow: `0 0 36px ${diffCfg.glow}` }}>
             <div className="dots" style={{ justifyContent: "center", marginBottom: 18 }}><span /><span /><span /></div>
