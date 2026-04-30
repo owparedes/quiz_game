@@ -3,10 +3,10 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { GameState, Question, AnswerKey, PlayerAnswer, Difficulty, DIFFICULTY_CONFIG } from "@/lib/gameTypes";
 import { pusherClient } from "@/lib/pusher";
 import {
-  initAudio, playTick, playUrgentTick, playTimeUp,
+  initAudio, playTick, playUrgentTick,
   startQuestionLoop, updateQuestionUrgency, playRevealMusic,
   startLeaderboardMusic, playWinnerMusic, setDifficulty,
-  playPause, playResume, stopMusic
+  playPause, playResume, stopMusic, playAnswerReveal
 } from "@/lib/sounds";
 
 const TEAM_COLORS = ["#63d38e", "#60a5fa", "#f59e0b", "#ec4899", "#a78bfa", "#34d399", "#f87171", "#38bdf8", "#fbbf24", "#c084fc"];
@@ -113,7 +113,7 @@ export default function HostPage() {
       const urgency = 1 - r / seconds;
       if (urgency > 0.6) updateQuestionUrgency(urgency);
       await broadcast(`quiz-${roomCode}`, "game:timer", { value: r, paused: false });
-      if (r <= 0) { clearTimer(); playTimeUp(); onEnd(); }
+      if (r <= 0) { clearTimer(); onEnd(); } // drum roll in goToReveal is the time-up signal
     }, 1000);
   }, [roomCode]);
 
@@ -155,6 +155,14 @@ export default function HostPage() {
       });
       setRoundScores(newRound); setScores(newScores);
       setPhase("answer");
+
+      // ── PRECISE SOUND TIMING ──────────────────────────────
+      // Drum roll (reveal.mp3) has been playing for 3800ms.
+      // Cut it now and play correct or wrong sting immediately.
+      const anyCorrect = answers.some(a => a.answer === correct);
+      playAnswerReveal(anyCorrect);
+      // ─────────────────────────────────────────────────────
+
       const ansState: GameState = {
         phase: "answer",
         currentQuestion: { text: q.text, choices: q.choices, difficulty: q.difficulty },

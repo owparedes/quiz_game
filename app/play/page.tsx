@@ -4,7 +4,7 @@ import { GameState, AnswerKey, DIFFICULTY_CONFIG } from "@/lib/gameTypes";
 import { pusherClient } from "@/lib/pusher";
 import {
   initAudio, playCorrect, playWrong, playRevealMusic, playWinnerMusic,
-  startLeaderboardMusic, startQuestionLoop, updateQuestionUrgency,
+  playRunnerUpMusic, startLeaderboardMusic, startQuestionLoop, updateQuestionUrgency,
   setDifficulty, playCountdownBeep, stopMusic
 } from "@/lib/sounds";
 
@@ -77,7 +77,7 @@ export default function PlayPage() {
       if (cur === "game_over" && prev !== "game_over") {
         const sorted = [...state.teams].sort((a, b) => (state.scores[b] || 0) - (state.scores[a] || 0));
         if (sorted[0] === teamName) { spawnConfetti(); playWinnerMusic(); }
-        else stopMusic();
+        else { stopMusic(); playRunnerUpMusic(); } // non-winners get runnerup.mp3
       }
       if (cur === "question" && (prev === "leaderboard" || prev === "game_over" || prev === "")) {
         setMyAnswer(null);
@@ -401,26 +401,35 @@ export default function PlayPage() {
   if (gameState.phase === "game_over") {
     const sorted = [...gameState.teams].sort((a, b) => (gameState.scores[b] || 0) - (gameState.scores[a] || 0));
     const isWinner = sorted[0] === teamName;
+    const myRank = sorted.indexOf(teamName) + 1;
+    const rankEmoji = myRank === 1 ? "🥇" : myRank === 2 ? "🥈" : myRank === 3 ? "🥉" : "🎯";
+    const rankLabel = myRank === 1 ? "1st Place" : myRank === 2 ? "2nd Place" : myRank === 3 ? "3rd Place" : `${myRank}th Place`;
     return (
       <main style={{ minHeight: "100svh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "20px", textAlign: "center", gap: 18 }}>
-        <div className="anim-float" style={{ fontSize: "3rem", lineHeight: 1 }}>{isWinner ? "🏆" : "🎯"}</div>
+        <div className="anim-float" style={{ fontSize: "3.5rem", lineHeight: 1 }}>{rankEmoji}</div>
         <div className="anim-up">
           <h1 style={{ fontWeight: 900, fontSize: "clamp(1.5rem,6vw,2rem)", color: isWinner ? "var(--accent-hi)" : "var(--text-1)", letterSpacing: "-0.03em" }}>
             {isWinner ? "You Win! 🎉" : "Game Over"}
           </h1>
-          <p style={{ color: "var(--text-3)", fontSize: "0.88rem", marginTop: 4 }}>
-            🏆 <span style={{ color: "#fbbf24", fontWeight: 700 }}>{sorted[0]}</span> wins!
+          <p style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 800, fontSize: "1.3rem", color: isWinner ? "#fbbf24" : "var(--text-2)", marginTop: 6 }}>
+            {rankLabel}
           </p>
+          {!isWinner && (
+            <p style={{ color: "var(--text-3)", fontSize: "0.85rem", marginTop: 4 }}>
+              🏆 <span style={{ color: "#fbbf24", fontWeight: 700 }}>{sorted[0]}</span> wins!
+            </p>
+          )}
         </div>
         <div className="card anim-up-1" style={{ width: "100%", maxWidth: 320, padding: "18px 20px" }}>
+          <p style={{ fontSize: "0.66rem", fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--text-3)", marginBottom: 10 }}>Final Standings</p>
           <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {sorted.map((t, i) => (
               <div key={t} className={`rank-row${t === teamName ? " rank-row-me" : ""}${i === 0 ? " rank-1" : ""}`}>
                 <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                  <span style={{ fontSize: "0.78rem", color: "var(--text-3)", minWidth: "1.4rem" }}>{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`}</span>
+                  <span style={{ fontSize: "0.82rem", minWidth: "1.4rem", textAlign: "center" }}>{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`}</span>
                   <span style={{ fontWeight: 600, fontSize: "0.86rem", color: t === teamName ? "var(--accent-hi)" : "var(--text-1)" }}>{t}</span>
                 </div>
-                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, color: "#fbbf24", fontSize: "0.86rem" }}>{gameState.scores[t] || 0}</span>
+                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, color: t === teamName ? "var(--accent-hi)" : "#fbbf24", fontSize: "0.86rem" }}>{gameState.scores[t] || 0}</span>
               </div>
             ))}
           </div>

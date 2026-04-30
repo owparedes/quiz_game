@@ -1,215 +1,313 @@
+// ============================================================
+//  QUIZ GAME SOUNDS — Precise timing, clean transitions
+//
+//  Sound file assignments (per user spec):
+//  wrong.mp3       → wrong answer
+//  correct.mp3     → correct answer
+//  winner.mp3      → winner (game over #1)
+//  leaderboard.mp3 → runner ups / leaderboard music
+//  countdown.mp3   → countdown / question loop
+//  reveal.mp3      → drum roll during reveal phase
+//
+//  Flow timing (host page):
+//  1. question phase  → countdown.mp3 loops
+//  2. reveal phase    → reveal.mp3 (drum roll) plays as one-shot
+//  3. +3800ms         → answer phase: drum roll stops, correct OR wrong plays
+//  4. +5000ms         → leaderboard phase: leaderboard.mp3 loops (runner ups)
+//  5. game_over       → winner.mp3 loops (winner celebration)
+// ============================================================
+
 let audioCtx: AudioContext | null = null;
 let masterGain: GainNode | null = null;
-let bgLoopNodes: { stop: () => void }[] = [];
 let currentLoop: string | null = null;
 let currentDiff: "easy" | "medium" | "hard" = "easy";
 
+// Active background audio (looping bg track)
+let bgAudio: HTMLAudioElement | null = null;
+// Active one-shot audio (drum roll, correct, wrong)
+let oneShotAudio: HTMLAudioElement | null = null;
+
+// Preloaded audio pool
+const audioPool: Record<string, HTMLAudioElement[]> = {};
+
+const SOUNDS = {
+  question:    "/sounds/countdown.mp3",    // loops during question phase
+  countdown:   "/sounds/countdown.mp3",    // same file used for countdown bg
+  reveal:      "/sounds/reveal.mp3",       // drum roll — plays once on reveal
+  correct:     "/sounds/correct.mp3",      // correct answer sting
+  wrong:       "/sounds/wrong.mp3",        // wrong answer sting
+  leaderboard: "/sounds/leaderboard.mp3",  // loops on leaderboard phase
+  winner:      "/sounds/winner.mp3",       // winner celebration — loops on game_over #1
+  runnerup:    "/sounds/runnerup.mp3",     // runner ups — loops on game_over for losers
+};
+
+// ── Preload ───────────────────────────────────────────────────
+function preload(key: string, url: string, copies = 2) {
+  audioPool[key] = [];
+  for (let i = 0; i < copies; i++) {
+    const a = new Audio(url);
+    a.preload = "auto";
+    a.load();
+    audioPool[key].push(a);
+  }
+}
+
+function getAudio(key: string): HTMLAudioElement {
+  const pool = audioPool[key];
+  if (!pool || pool.length === 0) {
+    return new Audio(SOUNDS[key as keyof typeof SOUNDS]);
+  }
+  const free = pool.find(a => a.paused || a.ended);
+  if (free) { free.currentTime = 0; return free; }
+  const clone = new Audio(pool[0].src);
+  clone.preload = "auto";
+  pool.push(clone);
+  return clone;
+}
+
+// ── Web Audio context (ticks/beeps only) ─────────────────────
 function ctx(): AudioContext {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
     masterGain = audioCtx.createGain();
-    masterGain.gain.value = 0.65;
+    masterGain.gain.value = 0.5;
     masterGain.connect(audioCtx.destination);
   }
   return audioCtx;
 }
-function master(): GainNode { ctx(); return masterGain!; }
-export function initAudio() { ctx(); }
-export function setDifficulty(d: "easy" | "medium" | "hard") { currentDiff = d; }
+function mg(): GainNode { ctx(); return masterGain!; }
 
-export function stopMusic() {
-  bgLoopNodes.forEach(n => { try { n.stop(); } catch { } });
-  bgLoopNodes = []; currentLoop = null;
-}
-
-function tone(freq: number, dur: number, type: OscillatorType = "sine", vol = 0.25, t0?: number, dest?: AudioNode) {
+function beep(freq: number, dur: number, vol = 0.2) {
   const c = ctx();
-  const osc = c.createOscillator();
+  const o = c.createOscillator();
   const g = c.createGain();
-  osc.connect(g); g.connect(dest ?? master());
-  osc.type = type; osc.frequency.value = freq;
-  const t = t0 ?? c.currentTime;
+  o.connect(g); g.connect(mg());
+  o.type = "sine"; o.frequency.value = freq;
+  const t = c.currentTime;
   g.gain.setValueAtTime(vol, t);
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  osc.start(t); osc.stop(t + dur + 0.01);
+  o.start(t); o.stop(t + dur + 0.01);
 }
-export function playTick() {
-  const c = ctx(), now = c.currentTime;
-  const freq = currentDiff === "hard" ? 1100 : currentDiff === "medium" ? 960 : 820;
-  tone(freq, 0.032, "square", 0.11, now);
-}
-export function playUrgentTick() {
-  const c = ctx(), now = c.currentTime;
-  tone(1300, 0.032, "square", 0.22, now);
-  tone(1600, 0.024, "square", 0.14, now + 0.04);
-}
-export function playTimeUp() {
-  stopMusic();
-  const c = ctx(), now = c.currentTime;
-  [400, 300, 200].forEach((f, i) => tone(f, 0.28, "sawtooth", 0.32, now + i * 0.2));
-}
-export function playCountdownBeep(n: number) {
-  const c = ctx(), now = c.currentTime;
-  if (n > 0) {
-    const base = 440 + (3 - n) * 120;
-    tone(base, 0.12, "square", 0.22, now);
-    tone(base * 1.5, 0.08, "sine", 0.12, now + 0.08);
-  } else {
-    [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.2, "sine", 0.35, now + i * 0.06));
-    tone(130, 0.35, "triangle", 0.3, now);
-  }
-}
-export function startQuestionLoop(urgency = 0) {
-  stopMusic(); currentLoop = "question";
-  const c = ctx();
-  const bpm = (currentDiff === "hard" ? 138 : currentDiff === "medium" ? 118 : 98) + urgency * 44;
-  const beat = 60 / bpm;
-  let stopped = false;
-  const bg = c.createGain(); bg.gain.value = 0; bg.connect(master());
-  const bo = c.createOscillator();
-  bo.type = "sine";
-  bo.frequency.value = currentDiff === "hard" ? 46 : currentDiff === "medium" ? 55 : 62;
-  bo.connect(bg); bo.start();
 
-  let nb = c.currentTime;
-  function pulse() {
-    if (stopped) return;
-    const now = c.currentTime;
-    if (nb < now) nb = now;
-    while (nb < now + 0.5) {
-      const v = 0.18 + urgency * 0.12;
-      bg.gain.setValueAtTime(v, nb);
-      bg.gain.exponentialRampToValueAtTime(0.0001, nb + beat * 0.38);
-      if (urgency > 0.45) {
-        bg.gain.setValueAtTime(v * 0.5, nb + beat * 0.52);
-        bg.gain.exponentialRampToValueAtTime(0.0001, nb + beat * 0.78);
-      }
-      nb += beat;
+// ── Internal fade out ─────────────────────────────────────────
+function fadeOut(el: HTMLAudioElement, durationMs = 250, onDone?: () => void) {
+  const startVol = el.volume;
+  if (startVol <= 0) { el.pause(); el.currentTime = 0; onDone?.(); return; }
+  const steps = 12;
+  const stepMs = durationMs / steps;
+  const volStep = startVol / steps;
+  let step = 0;
+  const iv = setInterval(() => {
+    step++;
+    el.volume = Math.max(0, startVol - volStep * step);
+    if (step >= steps) {
+      clearInterval(iv);
+      el.pause();
+      el.currentTime = 0;
+      onDone?.();
     }
-    setTimeout(pulse, 200);
-  }
-  pulse();
-  const patterns = {
-    easy: [220, 277, 330, 415, 523, 415, 330, 277],
-    medium: [185, 233, 311, 370, 466, 554, 466, 370],
-    hard: [110, 138, 165, 220, 277, 370, 466, 370, 277, 220],
-  };
-  const notes = patterns[currentDiff];
-  let ai = 0, aStopped = false;
-  const aspd = beat * (currentDiff === "hard" ? 0.28 : 0.5);
-  function arp() {
-    if (aStopped) return;
-    tone(notes[ai % notes.length], aspd * 0.8, currentDiff === "hard" ? "sawtooth" : "triangle", 0.055 + urgency * 0.04);
-    ai++; setTimeout(arp, aspd * 1000);
-  }
-  arp();
-  let hStopped = false;
-  if (currentDiff !== "easy" || urgency > 0.6) {
-    const hat = () => {
-      if (hStopped) return;
-      tone(5500 + Math.random() * 2500, 0.018, "square", 0.035);
-      setTimeout(hat, beat * 0.5 * 1000);
-    };
-    hat();
-    bgLoopNodes.push({ stop: () => { hStopped = true; } });
-  }
-
-  bgLoopNodes.push({ stop: () => { stopped = true; aStopped = true; try { bo.stop(); } catch { } } });
+  }, stepMs);
 }
 
-export function updateQuestionUrgency(urgency: number) {
-  if (currentLoop === "question") { stopMusic(); startQuestionLoop(urgency); }
+// ── Stop background loop ──────────────────────────────────────
+export function stopMusic(fadeMs = 250) {
+  if (bgAudio) {
+    const el = bgAudio;
+    bgAudio = null;
+    currentLoop = null;
+    fadeOut(el, fadeMs);
+  }
 }
-export function playRevealMusic() {
-  stopMusic();
-  const c = ctx(), now = c.currentTime;
-  const freqs = currentDiff === "hard"
-    ? [82, 98, 110, 138, 165, 196, 220, 277, 330, 392, 440, 523, 659]
-    : [110, 130, 155, 185, 220, 261, 311, 370, 440, 523];
-  freqs.forEach((f, i) => {
-    tone(f, 0.42, "sawtooth", 0.055 + i * 0.006, now + i * (currentDiff === "hard" ? 0.17 : 0.2));
-    tone(f * 4, 0.28, "sine", 0.03, now + i * 0.2 + 0.08);
+
+// ── Stop active one-shot (drum roll / sting) ──────────────────
+function stopOneShot(fadeMs = 120) {
+  if (oneShotAudio) {
+    const el = oneShotAudio;
+    oneShotAudio = null;
+    fadeOut(el, fadeMs);
+  }
+}
+
+// ── Play a looping background track ──────────────────────────
+function playLoop(key: string, volume = 0.75, fadeInMs = 400) {
+  stopMusic(200);
+
+  const a = getAudio(key);
+  a.loop = true;
+  a.volume = 0;
+  bgAudio = a;
+  currentLoop = key;
+
+  a.play().catch(() => {});
+
+  const steps = 20;
+  const stepMs = fadeInMs / steps;
+  let step = 0;
+  const iv = setInterval(() => {
+    step++;
+    if (bgAudio === a) a.volume = Math.min(volume, (step / steps) * volume);
+    if (step >= steps) clearInterval(iv);
+  }, stepMs);
+}
+
+// ── Play a one-shot sound ─────────────────────────────────────
+function playOneShot(key: string, volume = 1.0, onEnd?: () => void): HTMLAudioElement {
+  const a = getAudio(key);
+  a.loop = false;
+  a.volume = volume;
+  oneShotAudio = a;
+  a.play().catch(() => {});
+  if (onEnd) a.addEventListener("ended", onEnd, { once: true });
+  return a;
+}
+
+// ============================================================
+//  PUBLIC API
+// ============================================================
+
+export function initAudio() {
+  ctx();
+  Object.entries(SOUNDS).forEach(([key, url]) => {
+    const copies = (key === "correct" || key === "wrong") ? 3 : 2;
+    preload(key, url, copies);
   });
-  let rollT = now, rollI = currentDiff === "hard" ? 0.17 : 0.13, rStopped = false;
-  function roll() {
-    if (rStopped || rollT > now + 4) return;
-    tone(72, 0.055, "square", 0.18, rollT);
-    rollT += rollI; rollI *= (currentDiff === "hard" ? 0.87 : 0.92);
-    setTimeout(roll, 35);
-  }
-  roll();
-  bgLoopNodes.push({ stop: () => { rStopped = true; } });
-}
-export function playCorrect() {
-  stopMusic();
-  const c = ctx(), now = c.currentTime;
-  const melody = currentDiff === "hard"
-    ? [523, 659, 784, 1047, 1319, 1568, 1319, 1047, 1319, 1568]
-    : [523, 659, 784, 1047, 1319, 1047, 784, 1319];
-  melody.forEach((f, i) => tone(f, 0.22, "sine", 0.34, now + i * 0.08));
-  tone(130, 0.45, "triangle", 0.36, now);
-  if (currentDiff === "hard") { tone(80, 0.08, "square", 0.42, now); }
-}
-export function playWrong() {
-  stopMusic();
-  const c = ctx(), now = c.currentTime;
-  if (currentDiff === "hard") {
-    [220, 196, 165, 130].forEach((f, i) => tone(f, 0.22, "sawtooth", 0.38, now + i * 0.16));
-  } else {
-    [220, 196, 165].forEach((f, i) => tone(f, 0.22, "sawtooth", 0.3, now + i * 0.2));
-  }
-}
-export function startLeaderboardMusic(isTop: boolean) {
-  stopMusic(); currentLoop = "leaderboard";
-  const c = ctx(); let stopped = false;
-  const win = [[523, 659, 784], [587, 740, 880], [659, 784, 988], [523, 659, 784]];
-  const los = [[392, 494, 587], [440, 554, 659], [392, 494, 587], [349, 440, 523]];
-  const chords = isTop ? win : los;
-  let ci = 0;
-  const dur = currentDiff === "hard" ? 0.44 : 0.58;
-  function chord() {
-    if (stopped) return;
-    const now = c.currentTime;
-    chords[ci % chords.length].forEach((f, i) => tone(f, dur * 0.88, "sine", 0.11, now + i * 0.02));
-    tone(chords[ci % chords.length][0] / 2, dur * 0.6, "triangle", 0.16, now);
-    ci++; setTimeout(chord, dur * 1000);
-  }
-  chord();
-  let hStopped = false;
-  function hat() { if (hStopped) return; tone(4200 + Math.random() * 2000, 0.038, "square", 0.032); setTimeout(hat, 280); }
-  hat();
-  bgLoopNodes.push({ stop: () => { stopped = true; hStopped = true; } });
-}
-export function playWinnerMusic() {
-  stopMusic(); currentLoop = "winner";
-  const c = ctx(), now = c.currentTime;
-  const melody = [523, 523, 659, 523, 784, 740, 523, 523, 659, 523, 880, 784];
-  const timing = [0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.25, 2.5, 2.75, 3.0, 3.5];
-  melody.forEach((f, i) => { tone(f, 0.38, "sine", 0.36, now + timing[i]); tone(f * 2, 0.28, "sine", 0.12, now + timing[i] + 0.02); });
-  [130, 196, 261, 196, 130].forEach((f, i) => tone(f, 0.48, "triangle", 0.28, now + i * 0.75));
-  [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5].forEach(t => { tone(78, 0.07, "square", 0.24, now + t); tone(5000, 0.055, "square", 0.05, now + t + 0.25); });
-  let stopped = false, lt = now + 4.5;
-  function loop() {
-    if (stopped) return;
-    [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.48, "sine", 0.14, lt + i * 0.03));
-    tone(130, 0.38, "triangle", 0.18, lt);
-    lt += 1.2; setTimeout(loop, 1200);
-  }
-  loop();
-  bgLoopNodes.push({ stop: () => { stopped = true; } });
-}
-export function playPause() {
-  const c = ctx(), now = c.currentTime;
-  tone(660, 0.08, "sine", 0.2, now);
-  tone(440, 0.12, "sine", 0.2, now + 0.1);
-}
-export function playResume() {
-  const c = ctx(), now = c.currentTime;
-  tone(440, 0.08, "sine", 0.2, now);
-  tone(660, 0.12, "sine", 0.2, now + 0.1);
-  tone(880, 0.1, "sine", 0.18, now + 0.2);
 }
 
-export function playSuspense() { playRevealMusic(); }
+export function setDifficulty(d: "easy" | "medium" | "hard") {
+  currentDiff = d;
+}
+
+// ── QUESTION PHASE ────────────────────────────────────────────
+// countdown.mp3 loops as background music during question
+export function startQuestionLoop(_urgency = 0) {
+  if (currentLoop === "question") return;
+  playLoop("question", 0.72, 600);
+  currentLoop = "question";
+}
+
+// Increases playback rate as urgency climbs past 0.6
+export function updateQuestionUrgency(urgency: number) {
+  if (bgAudio && currentLoop === "question") {
+    bgAudio.playbackRate = 1.0 + (urgency - 0.6) * 0.6;
+  }
+}
+
+// ── TICKS ─────────────────────────────────────────────────────
+export function playTick() {
+  const freq = currentDiff === "hard" ? 1100 : currentDiff === "medium" ? 950 : 820;
+  beep(freq, 0.04, 0.12);
+}
+
+export function playUrgentTick() {
+  beep(1400, 0.035, 0.22);
+  setTimeout(() => beep(1700, 0.025, 0.14), 40);
+}
+
+// playTimeUp removed — drum roll (reveal.mp3) is the time-up signal
+export function playTimeUp() { /* no-op */ }
+
+// ── COUNTDOWN 3..2..1 ────────────────────────────────────────
+// n=3,2,1 → simple beep each number
+// n=0 (GO) → silent; countdown.mp3 fade-in IS the "GO" signal
+export function playCountdownBeep(n: number) {
+  if (n > 0) {
+    const freqs = [523, 659, 784];
+    const f = freqs[3 - n] ?? 784;
+    beep(f, 0.12, 0.28);
+  }
+  // n === 0: do nothing — startQuestionLoop() called right after handles the music
+}
+
+// ── REVEAL PHASE — DRUM ROLL ──────────────────────────────────
+// Plays reveal.mp3 ONCE as a one-shot (not looping, not bg).
+// Host page calls playAnswerReveal() after 3800ms to cut it.
+export function playRevealMusic() {
+  stopMusic(150);   // fade out question loop
+  stopOneShot(80);  // clear any leftover one-shot
+
+  const a = getAudio("reveal");
+  a.loop = false;   // drum roll plays once — no infinite loop
+  a.volume = 0.88;
+  oneShotAudio = a;
+  a.play().catch(() => {});
+}
+
+// ── ANSWER PHASE — CORRECT / WRONG ───────────────────────────
+// Stops drum roll cleanly then plays the result sting.
+// Call this from host page goToReveal's setTimeout (at 3800ms).
+export function playAnswerReveal(isCorrect: boolean) {
+  stopOneShot(100);  // cut drum roll with short fade
+  stopMusic(80);
+
+  // 80ms gap so the cut lands before the sting — feels intentional
+  setTimeout(() => {
+    playOneShot(isCorrect ? "correct" : "wrong", 0.92);
+  }, 80);
+}
+
+// Standalone correct/wrong (backward compat)
+export function playCorrect() {
+  stopOneShot(100);
+  stopMusic(80);
+  setTimeout(() => playOneShot("correct", 0.92), 80);
+}
+
+export function playWrong() {
+  stopOneShot(100);
+  stopMusic(80);
+  setTimeout(() => playOneShot("wrong", 0.92), 80);
+}
+
+// ── LEADERBOARD — RUNNER UPS ──────────────────────────────────
+// leaderboard.mp3 loops. Called after answer phase (+5000ms).
+export function startLeaderboardMusic(_isTop: boolean) {
+  stopOneShot(200);
+  playLoop("leaderboard", 0.78, 500);
+  currentLoop = "leaderboard";
+}
+
+// ── WINNER — GAME OVER ────────────────────────────────────────
+// winner.mp3 loops for the champion reveal.
+export function playWinnerMusic() {
+  stopOneShot(200);
+  playLoop("winner", 0.85, 300);
+  currentLoop = "winner";
+}
+
+// ── RUNNER UP — GAME OVER (losers) ───────────────────────────
+// runnerup.mp3 loops for all non-winners at game_over.
+export function playRunnerUpMusic() {
+  stopOneShot(200);
+  playLoop("runnerup", 0.80, 400);
+  currentLoop = "runnerup";
+}
+
+// ── PAUSE / RESUME ────────────────────────────────────────────
+export function playPause() {
+  if (bgAudio) bgAudio.volume = 0.2;
+  beep(880, 0.06, 0.18);
+  setTimeout(() => beep(660, 0.09, 0.18), 80);
+  setTimeout(() => beep(440, 0.14, 0.18), 170);
+}
+
+export function playResume() {
+  if (bgAudio) {
+    bgAudio.volume = 0;
+    let v = 0;
+    const target = currentLoop === "question" ? 0.72 : 0.78;
+    const fi = setInterval(() => {
+      v += target / 15;
+      if (bgAudio) bgAudio.volume = Math.min(target, v);
+      if (v >= target) clearInterval(fi);
+    }, 30);
+  }
+  beep(440, 0.06, 0.18);
+  setTimeout(() => beep(660, 0.08, 0.18), 80);
+  setTimeout(() => beep(880, 0.12, 0.18), 160);
+  setTimeout(() => beep(1100, 0.10, 0.15), 240);
+}
+
+// ── ALIASES ───────────────────────────────────────────────────
+export function playSuspense()    { playRevealMusic(); }
 export function playCelebration() { playWinnerMusic(); }
 export function playLeaderboard() { startLeaderboardMusic(false); }
