@@ -67,6 +67,7 @@ export default function HostPage() {
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState("");
   const [tab, setTab] = useState<"editor" | "list">("editor");
+  const [hostCountdown, setHostCountdown] = useState(0); // 3,2,1 before timer starts
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const pausedRef = useRef(false);
@@ -185,7 +186,7 @@ export default function HostPage() {
     pausedRef.current = false; setPaused(false);
     const q = questions[qi];
     setDifficulty(q.difficulty || "easy");
-    startQuestionLoop(0);
+
     const state: GameState = {
       phase: "question",
       currentQuestion: { text: q.text, choices: q.choices, difficulty: q.difficulty },
@@ -194,7 +195,21 @@ export default function HostPage() {
       difficulty: q.difficulty,
     };
     await broadcast(`quiz-${roomCode}`, "game:state", state);
-    startTimer(timeLimit, () => { goToReveal(pendingRef.current, scoresRef.current, qi); });
+
+    // 3-second countdown on host to sync with players before timer starts
+    setHostCountdown(3);
+    let c = 3;
+    const cdInterval = setInterval(() => {
+      c -= 1;
+      if (c <= 0) {
+        clearInterval(cdInterval);
+        setHostCountdown(0);
+        startQuestionLoop(0);
+        startTimer(timeLimit, () => { goToReveal(pendingRef.current, scoresRef.current, qi); });
+      } else {
+        setHostCountdown(c);
+      }
+    }, 1000);
   }, [questions, timeLimit, teams, roomCode, startTimer, goToReveal]);
 
   const handleNext = useCallback(async () => {
@@ -557,7 +572,13 @@ export default function HostPage() {
             </div>
           </div>
         )}
-        {phase === "question" && currentQ && (
+        {phase === "question" && currentQ && hostCountdown > 0 ? (
+          <div className="card anim-scale" style={{ padding: "clamp(28px,6vw,48px)", textAlign: "center", borderColor: diffCfg.border, boxShadow: `0 0 36px ${diffCfg.glow}` }}>
+            <p style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-3)", marginBottom: 12 }}>Get Ready…</p>
+            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 900, fontSize: "clamp(4rem,16vw,7rem)", color: diffCfg.color, lineHeight: 1 }}>{hostCountdown}</div>
+            <p style={{ fontSize: "0.78rem", color: "var(--text-3)", marginTop: 12 }}>Q{qIdx + 1} of {questions.length} · {diffCfg.label}</p>
+          </div>
+        ) : phase === "question" && currentQ && (
           <div className="card anim-scale" style={{ padding: "clamp(18px,4vw,26px)", borderColor: diffCfg.border, boxShadow: `0 0 28px ${diffCfg.glow}` }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, gap: 8 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -652,7 +673,7 @@ export default function HostPage() {
               </button>
             </div>
           </div>
-        )}
+        ))}
         {phase === "reveal" && (
           <div className="card anim-scale" style={{ padding: "clamp(28px,5vw,44px) clamp(20px,5vw,28px)", textAlign: "center", borderColor: diffCfg.border, boxShadow: `0 0 36px ${diffCfg.glow}` }}>
             <div className="dots" style={{ justifyContent: "center", marginBottom: 18 }}><span /><span /><span /></div>
