@@ -62,7 +62,7 @@ export default function Home() {
         </Link>
       </div>
       <p className="anim-up-3" style={{ marginTop: 28, color: "var(--text-3)", fontSize: "0.64rem", letterSpacing: "0.07em", fontWeight: 600, textTransform: "uppercase" }}>
-        Salientes-Gonzalez Associates
+        Created by Owen Paredes
       </p>
     </main>
   );
