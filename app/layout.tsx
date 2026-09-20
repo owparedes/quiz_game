@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "QuizLive — Real-time Multiplayer Quiz",
-  description: "Compete with your team in real-time quiz battles",
+  title: { absolute: "QuizLive" },
+  description: "Live multiplayer quiz game",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

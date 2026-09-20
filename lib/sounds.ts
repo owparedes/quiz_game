@@ -1,201 +1,164 @@
-// ============================================================
-//  QUIZ GAME SOUNDS — Precise timing, clean transitions
-//
-//  Sound file assignments (per user spec):
-//  wrong.mp3       → wrong answer
-//  correct.mp3     → correct answer
-//  winner.mp3      → winner (game over #1)
-//  leaderboard.mp3 → runner ups / leaderboard music
-//  countdown.mp3   → countdown / question loop
-//  reveal.mp3      → drum roll during reveal phase
-//
-//  Flow timing (host page):
-//  1. question phase  → countdown.mp3 loops
-//  2. reveal phase    → reveal.mp3 (drum roll) plays as one-shot
-//  3. +3800ms         → answer phase: drum roll stops, correct OR wrong plays
-//  4. +5000ms         → leaderboard phase: leaderboard.mp3 loops (runner ups)
-//  5. game_over       → winner.mp3 loops (winner celebration)
-// ============================================================
+import { Difficulty } from "./types";
 
-let audioCtx: AudioContext | null = null;
-let masterGain: GainNode | null = null;
-let currentLoop: string | null = null;
-let currentDiff: "easy" | "medium" | "hard" = "easy";
-
-// Active background audio (looping bg track)
-let bgAudio: HTMLAudioElement | null = null;
-// Active one-shot audio (drum roll, correct, wrong)
-let oneShotAudio: HTMLAudioElement | null = null;
-
-// Preloaded audio pool
-const audioPool: Record<string, HTMLAudioElement[]> = {};
-
-const SOUNDS = {
-  question:    "/sounds/countdown.mp3",    // loops during question phase
-  countdown:   "/sounds/countdown.mp3",    // same file used for countdown bg
-  reveal:      "/sounds/reveal.mp3",       // drum roll — plays once on reveal
-  correct:     "/sounds/correct.mp3",      // correct answer sting
-  wrong:       "/sounds/wrong.mp3",        // wrong answer sting
-  leaderboard: "/sounds/leaderboard.mp3",  // loops on leaderboard phase
-  winner:      "/sounds/winner.mp3",       // winner celebration — loops on game_over #1
-  runnerup:    "/sounds/runnerup.mp3",     // runner ups — loops on game_over for losers
+const FILES = {
+  question: "/sounds/countdown.mp3",
+  reveal: "/sounds/reveal.mp3",
+  correct: "/sounds/correct.mp3",
+  wrong: "/sounds/wrong.mp3",
+  leaderboard: "/sounds/leaderboard.mp3",
+  winner: "/sounds/winner.mp3",
+  runnerup: "/sounds/runnerup.mp3",
 };
 
-// ── Preload ───────────────────────────────────────────────────
-function preload(key: string, url: string, copies = 2) {
-  audioPool[key] = [];
+type SoundName = keyof typeof FILES;
+
+const QUESTION_VOLUME = 0.72;
+const LEADERBOARD_VOLUME = 0.78;
+
+let context: AudioContext | null = null;
+let gain: GainNode | null = null;
+let music: HTMLAudioElement | null = null;
+let musicName: SoundName | null = null;
+let sting: HTMLAudioElement | null = null;
+let difficulty: Difficulty = "easy";
+const pool: Partial<Record<SoundName, HTMLAudioElement[]>> = {};
+
+function preload(name: SoundName, copies: number) {
+  pool[name] = [];
   for (let i = 0; i < copies; i++) {
-    const a = new Audio(url);
-    a.preload = "auto";
-    a.load();
-    audioPool[key].push(a);
+    const audio = new Audio(FILES[name]);
+    audio.preload = "auto";
+    audio.load();
+    pool[name]!.push(audio);
   }
 }
 
-function getAudio(key: string): HTMLAudioElement {
-  const pool = audioPool[key];
-  if (!pool || pool.length === 0) {
-    return new Audio(SOUNDS[key as keyof typeof SOUNDS]);
+function take(name: SoundName): HTMLAudioElement {
+  const copies = pool[name];
+  if (!copies || copies.length === 0) return new Audio(FILES[name]);
+  const free = copies.find(audio => audio.paused || audio.ended);
+  if (free) {
+    free.currentTime = 0;
+    return free;
   }
-  const free = pool.find(a => a.paused || a.ended);
-  if (free) { free.currentTime = 0; return free; }
-  const clone = new Audio(pool[0].src);
-  clone.preload = "auto";
-  pool.push(clone);
-  return clone;
+  const extra = new Audio(copies[0].src);
+  extra.preload = "auto";
+  copies.push(extra);
+  return extra;
 }
 
-// ── Web Audio context (ticks/beeps only) ─────────────────────
-function ctx(): AudioContext {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    masterGain = audioCtx.createGain();
-    masterGain.gain.value = 0.5;
-    masterGain.connect(audioCtx.destination);
+function getContext(): AudioContext {
+  if (!context) {
+    context = new (window.AudioContext || (window as any).webkitAudioContext)();
+    gain = context.createGain();
+    gain.gain.value = 0.5;
+    gain.connect(context.destination);
   }
-  return audioCtx;
-}
-function mg(): GainNode { ctx(); return masterGain!; }
-
-function beep(freq: number, dur: number, vol = 0.2) {
-  const c = ctx();
-  const o = c.createOscillator();
-  const g = c.createGain();
-  o.connect(g); g.connect(mg());
-  o.type = "sine"; o.frequency.value = freq;
-  const t = c.currentTime;
-  g.gain.setValueAtTime(vol, t);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.start(t); o.stop(t + dur + 0.01);
+  return context;
 }
 
-// ── Internal fade out ─────────────────────────────────────────
-function fadeOut(el: HTMLAudioElement, durationMs = 250, onDone?: () => void) {
-  const startVol = el.volume;
-  if (startVol <= 0) { el.pause(); el.currentTime = 0; onDone?.(); return; }
+function beep(frequency: number, duration: number, volume = 0.2) {
+  const audio = getContext();
+  const oscillator = audio.createOscillator();
+  const envelope = audio.createGain();
+  oscillator.connect(envelope);
+  envelope.connect(gain!);
+  oscillator.type = "sine";
+  oscillator.frequency.value = frequency;
+  const now = audio.currentTime;
+  envelope.gain.setValueAtTime(volume, now);
+  envelope.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+  oscillator.start(now);
+  oscillator.stop(now + duration + 0.01);
+}
+
+function fadeOut(audio: HTMLAudioElement, durationMs = 250) {
+  const startVolume = audio.volume;
+  if (startVolume <= 0) {
+    audio.pause();
+    audio.currentTime = 0;
+    return;
+  }
   const steps = 12;
-  const stepMs = durationMs / steps;
-  const volStep = startVol / steps;
   let step = 0;
-  const iv = setInterval(() => {
+  const interval = setInterval(() => {
     step++;
-    el.volume = Math.max(0, startVol - volStep * step);
+    audio.volume = Math.max(0, startVolume - (startVolume / steps) * step);
     if (step >= steps) {
-      clearInterval(iv);
-      el.pause();
-      el.currentTime = 0;
-      onDone?.();
+      clearInterval(interval);
+      audio.pause();
+      audio.currentTime = 0;
     }
-  }, stepMs);
+  }, durationMs / steps);
 }
 
-// ── Stop background loop ──────────────────────────────────────
-export function stopMusic(fadeMs = 250) {
-  if (bgAudio) {
-    const el = bgAudio;
-    bgAudio = null;
-    currentLoop = null;
-    fadeOut(el, fadeMs);
-  }
-}
-
-// ── Stop active one-shot (drum roll / sting) ──────────────────
-function stopOneShot(fadeMs = 120) {
-  if (oneShotAudio) {
-    const el = oneShotAudio;
-    oneShotAudio = null;
-    fadeOut(el, fadeMs);
-  }
-}
-
-// ── Play a looping background track ──────────────────────────
-function playLoop(key: string, volume = 0.75, fadeInMs = 400) {
-  stopMusic(200);
-
-  const a = getAudio(key);
-  a.loop = true;
-  a.volume = 0;
-  bgAudio = a;
-  currentLoop = key;
-
-  a.play().catch(() => {});
-
+function fadeIn(audio: HTMLAudioElement, volume: number, durationMs: number) {
   const steps = 20;
-  const stepMs = fadeInMs / steps;
   let step = 0;
-  const iv = setInterval(() => {
+  const interval = setInterval(() => {
     step++;
-    if (bgAudio === a) a.volume = Math.min(volume, (step / steps) * volume);
-    if (step >= steps) clearInterval(iv);
-  }, stepMs);
+    if (music === audio) audio.volume = Math.min(volume, (step / steps) * volume);
+    if (step >= steps) clearInterval(interval);
+  }, durationMs / steps);
 }
 
-// ── Play a one-shot sound ─────────────────────────────────────
-function playOneShot(key: string, volume = 1.0, onEnd?: () => void): HTMLAudioElement {
-  const a = getAudio(key);
-  a.loop = false;
-  a.volume = volume;
-  oneShotAudio = a;
-  a.play().catch(() => {});
-  if (onEnd) a.addEventListener("ended", onEnd, { once: true });
-  return a;
+export function stopMusic(fadeMs = 250) {
+  if (!music) return;
+  const audio = music;
+  music = null;
+  musicName = null;
+  fadeOut(audio, fadeMs);
 }
 
-// ============================================================
-//  PUBLIC API
-// ============================================================
+function stopSting(fadeMs = 120) {
+  if (!sting) return;
+  const audio = sting;
+  sting = null;
+  fadeOut(audio, fadeMs);
+}
+
+function playLoop(name: SoundName, volume: number, fadeMs: number) {
+  stopMusic(200);
+  const audio = take(name);
+  audio.loop = true;
+  audio.volume = 0;
+  music = audio;
+  musicName = name;
+  audio.play().catch(() => {});
+  fadeIn(audio, volume, fadeMs);
+}
+
+function playOnce(name: SoundName, volume: number) {
+  const audio = take(name);
+  audio.loop = false;
+  audio.volume = volume;
+  sting = audio;
+  audio.play().catch(() => {});
+}
 
 export function initAudio() {
-  ctx();
-  Object.entries(SOUNDS).forEach(([key, url]) => {
-    const copies = (key === "correct" || key === "wrong") ? 3 : 2;
-    preload(key, url, copies);
+  getContext();
+  (Object.keys(FILES) as SoundName[]).forEach(name => {
+    preload(name, name === "correct" || name === "wrong" ? 3 : 2);
   });
 }
 
-export function setDifficulty(d: "easy" | "medium" | "hard") {
-  currentDiff = d;
+export function setDifficulty(value: Difficulty) {
+  difficulty = value;
 }
 
-// ── QUESTION PHASE ────────────────────────────────────────────
-// countdown.mp3 loops as background music during question
-export function startQuestionLoop(_urgency = 0) {
-  if (currentLoop === "question") return;
-  playLoop("question", 0.72, 600);
-  currentLoop = "question";
+export function startQuestionLoop() {
+  if (musicName === "question") return;
+  playLoop("question", QUESTION_VOLUME, 600);
 }
 
-// Increases playback rate as urgency climbs past 0.6
 export function updateQuestionUrgency(urgency: number) {
-  if (bgAudio && currentLoop === "question") {
-    bgAudio.playbackRate = 1.0 + (urgency - 0.6) * 0.6;
-  }
+  if (music && musicName === "question") music.playbackRate = 1 + (urgency - 0.6) * 0.6;
 }
 
-// ── TICKS ─────────────────────────────────────────────────────
 export function playTick() {
-  const freq = currentDiff === "hard" ? 1100 : currentDiff === "medium" ? 950 : 820;
-  beep(freq, 0.04, 0.12);
+  const frequency = difficulty === "hard" ? 1100 : difficulty === "medium" ? 950 : 820;
+  beep(frequency, 0.04, 0.12);
 }
 
 export function playUrgentTick() {
@@ -203,111 +166,53 @@ export function playUrgentTick() {
   setTimeout(() => beep(1700, 0.025, 0.14), 40);
 }
 
-// playTimeUp removed — drum roll (reveal.mp3) is the time-up signal
-export function playTimeUp() { /* no-op */ }
-
-// ── COUNTDOWN 3..2..1 ────────────────────────────────────────
-// n=3,2,1 → simple beep each number
-// n=0 (GO) → silent; countdown.mp3 fade-in IS the "GO" signal
-export function playCountdownBeep(n: number) {
-  if (n > 0) {
-    const freqs = [523, 659, 784];
-    const f = freqs[3 - n] ?? 784;
-    beep(f, 0.12, 0.28);
-  }
-  // n === 0: do nothing — startQuestionLoop() called right after handles the music
+export function playCountdownBeep(count: number) {
+  if (count <= 0) return;
+  const notes = [523, 659, 784];
+  beep(notes[3 - count] ?? 784, 0.12, 0.28);
 }
 
-// ── REVEAL PHASE — DRUM ROLL ──────────────────────────────────
-// Plays reveal.mp3 ONCE as a one-shot (not looping, not bg).
-// Host page calls playAnswerReveal() after 3800ms to cut it.
 export function playRevealMusic() {
-  stopMusic(150);   // fade out question loop
-  stopOneShot(80);  // clear any leftover one-shot
-
-  const a = getAudio("reveal");
-  a.loop = false;   // drum roll plays once — no infinite loop
-  a.volume = 0.88;
-  oneShotAudio = a;
-  a.play().catch(() => {});
+  stopMusic(150);
+  stopSting(80);
+  playOnce("reveal", 0.88);
 }
 
-// ── ANSWER PHASE — CORRECT / WRONG ───────────────────────────
-// Stops drum roll cleanly then plays the result sting.
-// Call this from host page goToReveal's setTimeout (at 3800ms).
-export function playAnswerReveal(isCorrect: boolean) {
-  stopOneShot(100);  // cut drum roll with short fade
+export function playAnswerReveal(correct: boolean) {
+  stopSting(100);
   stopMusic(80);
-
-  // 80ms gap so the cut lands before the sting — feels intentional
-  setTimeout(() => {
-    playOneShot(isCorrect ? "correct" : "wrong", 0.92);
-  }, 80);
+  setTimeout(() => playOnce(correct ? "correct" : "wrong", 0.92), 80);
 }
 
-// Standalone correct/wrong (backward compat)
-export function playCorrect() {
-  stopOneShot(100);
-  stopMusic(80);
-  setTimeout(() => playOneShot("correct", 0.92), 80);
+export function startLeaderboardMusic() {
+  stopSting(200);
+  playLoop("leaderboard", LEADERBOARD_VOLUME, 500);
 }
 
-export function playWrong() {
-  stopOneShot(100);
-  stopMusic(80);
-  setTimeout(() => playOneShot("wrong", 0.92), 80);
-}
-
-// ── LEADERBOARD — RUNNER UPS ──────────────────────────────────
-// leaderboard.mp3 loops. Called after answer phase (+5000ms).
-export function startLeaderboardMusic(_isTop: boolean) {
-  stopOneShot(200);
-  playLoop("leaderboard", 0.78, 500);
-  currentLoop = "leaderboard";
-}
-
-// ── WINNER — GAME OVER ────────────────────────────────────────
-// winner.mp3 loops for the champion reveal.
 export function playWinnerMusic() {
-  stopOneShot(200);
+  stopSting(200);
   playLoop("winner", 0.85, 300);
-  currentLoop = "winner";
 }
 
-// ── RUNNER UP — GAME OVER (losers) ───────────────────────────
-// runnerup.mp3 loops for all non-winners at game_over.
 export function playRunnerUpMusic() {
-  stopOneShot(200);
-  playLoop("runnerup", 0.80, 400);
-  currentLoop = "runnerup";
+  stopSting(200);
+  playLoop("runnerup", 0.8, 400);
 }
 
-// ── PAUSE / RESUME ────────────────────────────────────────────
 export function playPause() {
-  if (bgAudio) bgAudio.volume = 0.2;
+  if (music) music.volume = 0.2;
   beep(880, 0.06, 0.18);
   setTimeout(() => beep(660, 0.09, 0.18), 80);
   setTimeout(() => beep(440, 0.14, 0.18), 170);
 }
 
 export function playResume() {
-  if (bgAudio) {
-    bgAudio.volume = 0;
-    let v = 0;
-    const target = currentLoop === "question" ? 0.72 : 0.78;
-    const fi = setInterval(() => {
-      v += target / 15;
-      if (bgAudio) bgAudio.volume = Math.min(target, v);
-      if (v >= target) clearInterval(fi);
-    }, 30);
+  if (music) {
+    music.volume = 0;
+    fadeIn(music, musicName === "question" ? QUESTION_VOLUME : LEADERBOARD_VOLUME, 450);
   }
   beep(440, 0.06, 0.18);
   setTimeout(() => beep(660, 0.08, 0.18), 80);
   setTimeout(() => beep(880, 0.12, 0.18), 160);
-  setTimeout(() => beep(1100, 0.10, 0.15), 240);
+  setTimeout(() => beep(1100, 0.1, 0.15), 240);
 }
-
-// ── ALIASES ───────────────────────────────────────────────────
-export function playSuspense()    { playRevealMusic(); }
-export function playCelebration() { playWinnerMusic(); }
-export function playLeaderboard() { startLeaderboardMusic(false); }

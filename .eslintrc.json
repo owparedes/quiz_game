@@ -1,8 +1,6 @@
 {
   "extends": "next/core-web-vitals",
   "rules": {
-    "@typescript-eslint/no-explicit-any": "off",
-    "react-hooks/exhaustive-deps": "warn",
-    "no-unused-vars": "warn"
+    "react-hooks/exhaustive-deps": "warn"
   }
 }
