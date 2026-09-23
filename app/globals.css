@@ -201,16 +201,23 @@ main {
 }
 
 .footer {
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--text-3);
+  margin-top: auto;
+}
+
+.footer-inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 10px;
-  padding: 16px clamp(16px, 4vw, 32px);
-  border-top: 1px solid var(--border);
-  font-size: 0.8rem;
-  color: var(--text-3);
-  margin-top: auto;
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 16px;
 }
 
 .footer-links {
@@ -227,41 +234,25 @@ main {
   color: var(--accent);
 }
 
-.page {
-  flex: 1;
-  width: 100%;
-  max-width: 760px;
-  margin: 0 auto;
-  padding: clamp(32px, 6vw, 64px) 16px;
+.legal-body p + p,
+.legal-body p + ul,
+.legal-body ul + p {
+  margin-top: 12px;
 }
 
-.page h1 {
-  font-weight: 800;
-  font-size: clamp(1.6rem, 5vw, 2.2rem);
-  letter-spacing: -0.02em;
-  margin-bottom: 6px;
-}
-
-.page h2 {
-  font-weight: 700;
-  font-size: 1.1rem;
-  margin: 28px 0 8px;
-}
-
-.page p,
-.page li {
-  font-size: 0.95rem;
-  line-height: 1.7;
-  color: var(--text-2);
-}
-
-.page ul {
+.legal-body ul {
+  list-style: disc;
   padding-left: 20px;
-  margin-top: 4px;
+  margin-top: 8px;
 }
 
-.page a {
-  color: var(--accent);
+.legal-body li + li {
+  margin-top: 6px;
+}
+
+.legal-body strong {
+  color: var(--text-1);
+  font-weight: 600;
 }
 
 

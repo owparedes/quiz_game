@@ -4,7 +4,7 @@ import { NavigationLoader } from "@/components/ui/NavigationLoader";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { absolute: "QuizLive" },
+  title: { default: "QuizLive", template: "%s" },
   description: "Live multiplayer quiz game",
 };
 
