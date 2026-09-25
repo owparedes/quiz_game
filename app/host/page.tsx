@@ -14,7 +14,7 @@ export default function HostPage() {
   const question = game.questions[game.questionIndex];
 
   if (!game.joined) {
-    return <Setup roomCode={game.roomCode} onChange={game.setRoomCode} onJoin={() => game.join(game.roomCode)} />;
+    return <Setup creating={game.creating} error={game.error} onCreate={game.create} onResume={game.resume} />;
   }
 
   if (game.phase === "game_over") {

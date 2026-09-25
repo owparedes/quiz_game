@@ -18,3 +18,10 @@ export const DIFFICULTY_CONFIG: Record<Difficulty, { label: string; color: strin
 export const TEAM_COLORS = ["#4f46e5", "#0284c7", "#d97706", "#db2777", "#7c3aed", "#059669", "#dc2626", "#0891b2", "#ca8a04", "#9333ea"];
 
 export const CONFETTI_COLORS = ["#4f46e5", "#0ea5e9", "#f59e0b", "#ef4444", "#8b5cf6", "#10b981", "#ec4899"];
+
+export const MAX_QUESTIONS = 200;
+export const MAX_QUESTION_LENGTH = 300;
+export const MAX_CHOICE_LENGTH = 120;
+export const MAX_TEAM_NAME_LENGTH = 24;
+export const MAX_TEAMS = 60;
+export const MAX_IMPORT_BYTES = 512 * 1024;

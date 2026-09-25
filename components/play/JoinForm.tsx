@@ -1,3 +1,5 @@
+import { MAX_TEAM_NAME_LENGTH } from "@/lib/config";
+
 interface Props {
   roomCode: string;
   teamName: string;
@@ -23,12 +25,12 @@ export function JoinForm({ roomCode, teamName, error, onRoomCodeChange, onTeamNa
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div>
             <label className="label">Room Code</label>
-            <input className="inp inp-mono" placeholder="ROOM CODE" value={roomCode} maxLength={12} autoComplete="off" spellCheck={false}
-              onChange={event => onRoomCodeChange(event.target.value.toUpperCase())} />
+            <input className="inp inp-mono" placeholder="ROOM CODE" value={roomCode} maxLength={6} autoComplete="off" spellCheck={false}
+              onChange={event => onRoomCodeChange(event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))} />
           </div>
           <div>
             <label className="label">Your Name / Team</label>
-            <input className="inp" placeholder="e.g. Team Alpha" value={teamName}
+            <input className="inp" placeholder="e.g. Team Alpha" value={teamName} maxLength={MAX_TEAM_NAME_LENGTH} autoComplete="off"
               onChange={event => onTeamNameChange(event.target.value)}
               onKeyDown={event => event.key === "Enter" && onJoin()} />
           </div>

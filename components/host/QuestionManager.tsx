@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef } from "react";
 import { Question, AnswerKey, Difficulty } from "@/lib/types";
-import { ANSWER_KEYS, DIFFICULTIES, DIFFICULTY_CONFIG, TIME_OPTIONS } from "@/lib/config";
+import { ANSWER_KEYS, DIFFICULTIES, DIFFICULTY_CONFIG, MAX_CHOICE_LENGTH, MAX_IMPORT_BYTES, MAX_QUESTION_LENGTH, MAX_QUESTIONS, TIME_OPTIONS } from "@/lib/config";
 import { EMPTY_QUESTION, isComplete, parseQuestions } from "@/lib/questions";
 
 interface Props {
@@ -30,6 +30,7 @@ export function QuestionManager({ questions, onChange, timeLimit, onTimeLimitCha
 
   const saveDraft = () => {
     if (!isComplete(draft)) return;
+    if (editIndex === null && questions.length >= MAX_QUESTIONS) return;
     if (editIndex !== null) onChange(questions.map((question, index) => index === editIndex ? { ...draft } : question));
     else onChange([...questions, { ...draft }]);
     resetDraft();
@@ -49,20 +50,32 @@ export function QuestionManager({ questions, onChange, timeLimit, onTimeLimitCha
 
   const readFile = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    event.target.value = "";
     if (!file) return;
+    if (file.size > MAX_IMPORT_BYTES) {
+      setImportError("File is too large.");
+      return;
+    }
     const reader = new FileReader();
     reader.onload = loaded => setImportText((loaded.target?.result as string) || "");
     reader.readAsText(file);
-    event.target.value = "";
   };
 
   const importQuestions = () => {
     setImportError("");
     setImportDone(false);
+    if (importText.length > MAX_IMPORT_BYTES) {
+      setImportError("Import is too large.");
+      return;
+    }
     try {
       const parsed = parseQuestions(JSON.parse(importText));
       if (!parsed) {
         setImportError("Invalid format. Check your JSON structure.");
+        return;
+      }
+      if (questions.length + parsed.length > MAX_QUESTIONS) {
+        setImportError(`You can have at most ${MAX_QUESTIONS} questions.`);
         return;
       }
       onChange([...questions, ...parsed]);
@@ -91,7 +104,7 @@ export function QuestionManager({ questions, onChange, timeLimit, onTimeLimitCha
       {tab === "editor" && (
         <>
           <label className="label">Question</label>
-          <textarea className="inp" rows={3} placeholder="Type your question here…" style={{ marginBottom: 14 }}
+          <textarea className="inp" rows={3} maxLength={MAX_QUESTION_LENGTH} placeholder="Type your question here…" style={{ marginBottom: 14 }}
             value={draft.text} onChange={event => setDraft({ ...draft, text: event.target.value })} />
 
           <label className="label">Difficulty & Points</label>
@@ -115,7 +128,7 @@ export function QuestionManager({ questions, onChange, timeLimit, onTimeLimitCha
           </div>
 
           <div style={{ display: "flex", gap: 7 }}>
-            <button className="btn btn-primary" style={{ flex: 1 }} onClick={saveDraft} disabled={!isComplete(draft)}>
+            <button className="btn btn-primary" style={{ flex: 1 }} onClick={saveDraft} disabled={!isComplete(draft) || (editIndex === null && questions.length >= MAX_QUESTIONS)}>
               {editIndex !== null ? "Save Changes" : "+ Add Question"}
             </button>
             {editIndex !== null && <button className="btn btn-ghost" onClick={resetDraft}>Cancel</button>}
@@ -202,7 +215,7 @@ function ChoiceRow({ answerKey, draft, onChange }: { answerKey: AnswerKey; draft
         }}>
         {answerKey}
       </button>
-      <input className="inp" style={{ padding: "8px 12px", fontSize: "0.85rem" }} placeholder={`Choice ${answerKey}`}
+      <input className="inp" style={{ padding: "8px 12px", fontSize: "0.85rem" }} maxLength={MAX_CHOICE_LENGTH} placeholder={`Choice ${answerKey}`}
         value={draft.choices[answerKey]} onChange={event => onChange({ ...draft, choices: { ...draft.choices, [answerKey]: event.target.value } })} />
     </div>
   );
